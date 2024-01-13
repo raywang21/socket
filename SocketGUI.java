@@ -16,7 +16,7 @@ import javax.swing.JSplitPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-public class GUI {
+public class SocketGUI {
 
 	JFrame f = new JFrame("SocketTest");
 
@@ -32,8 +32,9 @@ public class GUI {
 	JLabel lPort = new JLabel("Port:");
 	JTextField tIP = new JTextField(16);
 	JTextField tPort = new JTextField(8);
-	JButton bServer = new JButton("StartLocalServer");
-
+	JButton bServerStart = new JButton("Start Server");
+	JButton bServerStop = new JButton("Stop Server");
+	
 	{
 		pServer.setLayout(new FlowLayout());
 		tIP.setText("127.0.0.1");
@@ -42,8 +43,8 @@ public class GUI {
 		pServer.add(tIP);
 		pServer.add(lPort);
 		pServer.add(tPort);
-		pServer.add(bServer);
-
+		pServer.add(bServerStart);
+		pServer.add(bServerStop);
 	}
 
 	JPanel pClient = new JPanel();
@@ -52,7 +53,7 @@ public class GUI {
 	JLabel lPort1= new JLabel("Port:");
 	JTextField tIP1 = new JTextField(16);
 	JTextField tPort1 = new JTextField(8);
-	JButton bClient = new JButton("ConnetcRemoteServer");
+	JButton bSend = new JButton("SendMessage");
 
 	{
 		pClient.setLayout(new FlowLayout());
@@ -61,7 +62,7 @@ public class GUI {
 		pClient.add(tIP1);
 		pClient.add(lPort1);
 		pClient.add(tPort1);
-		pClient.add(bClient);
+		pClient.add(bSend);
 	}
 
 	JPanel pRecv = new JPanel();
@@ -85,7 +86,7 @@ public class GUI {
 		taRecv.setLineWrap(true);
 	}
 
-	JButton bSend = new JButton("SendMessage");
+
 	{
 		pRecv.setLayout(new BorderLayout());
 		pRecv.add(lRecv, BorderLayout.NORTH);
@@ -94,7 +95,7 @@ public class GUI {
 		pSend.setLayout(new BorderLayout());
 		pSend.add(lSend, BorderLayout.NORTH);
 		pSend.add(scSend, BorderLayout.CENTER);
-		pSend.add(bSend, BorderLayout.SOUTH);
+	
 	}
 
 	JSplitPane spLeft = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pServer, pClient);
@@ -104,9 +105,9 @@ public class GUI {
 	
 	JSplitPane spRight = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pRecv, pSend);
 	{
-		spRight.setDividerLocation(300);
+		//spRight.setDividerLocation(300);
 		// 设置分割条的位置
-		spLeft.setResizeWeight(0.5);
+		spRight.setResizeWeight(0.5);
 	}
 	
 	JSplitPane spMain = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, spLeft, spRight);
@@ -180,21 +181,54 @@ public class GUI {
 		}
 	}
 
+	//每个机器都启动自己的一个Server，以Thread方式不断运行，直到StopFlag为True为止
+	//如果要发送消息给其他机器，只在发送消息的时刻建立Socket，发送之后就关闭
+	//发送时给出自己的地址和Server端口，便于后续Server端回复
+	
+	//发送之后Server会给一个回复确认，让发送方知道Server已经收到。
+	//如果要回复消息，就连接Client机器的Server进程
+	
 	public static void main(String[] args) {
 
 		setLookAndFeel();
-		GUI gui = new GUI();
+		SocketGUI gui = new SocketGUI();
 	
-		gui.bServer.addActionListener(new ActionListener() {
+		gui.setFrameName("Server&Client");
+		
+		ThreadedServer server = new ThreadedServer(gui);
+		
+		gui.bServerStart.addActionListener(new ActionListener() {
 
 			// 当按钮被点击时，就会触发 ActionEvent事件
 			// actionPerformed 方法就会被执行
 			public void actionPerformed(ActionEvent e) {
-				
-					
+				server.startServer();
 			}
 		});
+		
+		gui.bServerStop.addActionListener(new ActionListener() {
 
+			// 当按钮被点击时，就会触发 ActionEvent事件
+			// actionPerformed 方法就会被执行
+			public void actionPerformed(ActionEvent e) {
+				server.stopServer();
+			}
+		});
+		
+		ThreadedClient client = new ThreadedClient(gui);
+		
+		gui.bSend.addActionListener(new ActionListener() {
+
+			ThreadedClient client = new ThreadedClient(gui);
+			// 当按钮被点击时，就会触发 ActionEvent事件
+			// actionPerformed 方法就会被执行
+			public void actionPerformed(ActionEvent e) {
+					// 启动接受消息线程
+				client.startSendThread();
+				
+			}
+		});
+		
 		gui.show();
 
 	}
